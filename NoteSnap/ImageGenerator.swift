@@ -55,8 +55,7 @@ class ImageGenerator {
         let cleanText = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !cleanText.isEmpty else { return 24 }
 
-        // Start with a reasonable font size and adjust
-        var fontSize: CGFloat = 60
+        // Define font size range for binary search
         let minFontSize: CGFloat = 12
         let maxFontSize: CGFloat = 120
 
