@@ -9,14 +9,16 @@ import UIKit
 import CoreGraphics
 
 class ImageGenerator {
-    // Image specifications for 2"x3" at 300 DPI
-    private let imageWidth: CGFloat = 600
-    private let imageHeight: CGFloat = 900
-    private let margin: CGFloat = 30
     private let backgroundColor: UIColor = .white
     private let textColor: UIColor = .black
+    private let dpi: CGFloat = 300 // Standard 300 DPI for high-quality printing
 
-    func generateImage(from text: String) -> UIImage {
+    func generateImage(from text: String, widthInches: Double = 2.0, heightInches: Double = 3.0) -> UIImage {
+        // Convert inches to pixels at 300 DPI
+        let imageWidth = CGFloat(widthInches * Double(dpi))
+        let imageHeight = CGFloat(heightInches * Double(dpi))
+        let margin: CGFloat = min(imageWidth, imageHeight) * 0.05 // 5% margin relative to smallest dimension
+
         let size = CGSize(width: imageWidth, height: imageHeight)
         let contentRect = CGRect(
             x: margin,

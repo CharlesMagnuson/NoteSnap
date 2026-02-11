@@ -13,6 +13,9 @@ struct ContentView: View {
     @State private var isGenerating: Bool = false
     @State private var showSuccessMessage: Bool = false
     @State private var errorMessage: String? = nil
+    @State private var showSizeSettings: Bool = false
+    @State private var widthInches: Double = 2.0
+    @State private var heightInches: Double = 3.0
     @FocusState private var isTextFieldFocused: Bool
 
     private let imageGenerator = ImageGenerator()
@@ -20,22 +23,22 @@ struct ContentView: View {
 
     var body: some View {
         NavigationView {
-            VStack(spacing: 30) {
+            VStack(spacing: 15) {
                 Spacer()
 
-                // App Title
-                Text("Note Snap")
-                    .font(.largeTitle)
-                    .fontWeight(.bold)
-                    .foregroundColor(.primary)
-
-                Text("Create printable notes for your 2\"×3\" printer")
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal)
+                // App Title - Tappable for settings
+                Button(action: {
+                    showSizeSettings = true
+                }) {
+                    Text("NoteSnap")
+                        .font(.largeTitle)
+                        .fontWeight(.bold)
+                        .foregroundColor(.primary)
+                }
+                .buttonStyle(PlainButtonStyle())
 
                 Spacer()
+                    .frame(height: 10)
 
                 // Text Input Area
                 VStack(alignment: .leading, spacing: 8) {
@@ -70,13 +73,14 @@ struct ContentView: View {
                 .padding(.horizontal, 20)
 
                 Spacer()
+                    .frame(height: 10)
 
-                // Generate Button
+                // Generate Button - Snapchat Yellow
                 Button(action: generateAndSaveImage) {
                     HStack {
                         if isGenerating {
                             ProgressView()
-                                .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                .progressViewStyle(CircularProgressViewStyle(tint: .black))
                                 .scaleEffect(0.9)
                         } else {
                             Image(systemName: "photo.badge.plus")
@@ -87,18 +91,12 @@ struct ContentView: View {
                             .font(.headline)
                             .fontWeight(.semibold)
                     }
-                    .foregroundColor(.white)
+                    .foregroundColor(.black)
                     .frame(maxWidth: .infinity)
                     .frame(height: 56)
-                    .background(
-                        LinearGradient(
-                            gradient: Gradient(colors: [Color.blue, Color.purple]),
-                            startPoint: .leading,
-                            endPoint: .trailing
-                        )
-                    )
+                    .background(Color(red: 1.0, green: 0.988, blue: 0.0)) // Snapchat yellow
                     .cornerRadius(16)
-                    .shadow(color: Color.blue.opacity(0.3), radius: 8, x: 0, y: 4)
+                    .shadow(color: Color(red: 1.0, green: 0.988, blue: 0.0).opacity(0.3), radius: 8, x: 0, y: 4)
                 }
                 .disabled(noteText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isGenerating)
                 .padding(.horizontal, 20)
@@ -140,6 +138,7 @@ struct ContentView: View {
             .navigationBarHidden(true)
         }
         .onAppear {
+            loadSizeSettings()
             // Auto-focus the text field when app opens
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                 isTextFieldFocused = true
@@ -148,6 +147,20 @@ struct ContentView: View {
         .onTapGesture {
             // Dismiss keyboard when tapping outside
             isTextFieldFocused = false
+        }
+        .sheet(isPresented: $showSizeSettings) {
+            SizeSettingsView(
+                widthInches: $widthInches,
+                heightInches: $heightInches,
+                onSave: {
+                    saveSizeSettings()
+                    showSizeSettings = false
+                },
+                onCancel: {
+                    loadSizeSettings() // Restore previous values
+                    showSizeSettings = false
+                }
+            )
         }
     }
 
@@ -161,8 +174,8 @@ struct ContentView: View {
         errorMessage = nil
         isGenerating = true
 
-        // Generate the image
-        let image = imageGenerator.generateImage(from: noteText)
+        // Generate the image with custom dimensions
+        let image = imageGenerator.generateImage(from: noteText, widthInches: widthInches, heightInches: heightInches)
 
         // Save to Photos
         photosManager.saveToPhotos(image: image) { result in
@@ -187,6 +200,22 @@ struct ContentView: View {
                     }
                 }
             }
+        }
+    }
+
+    private func saveSizeSettings() {
+        UserDefaults.standard.set(widthInches, forKey: "noteSnapWidthInches")
+        UserDefaults.standard.set(heightInches, forKey: "noteSnapHeightInches")
+    }
+
+    private func loadSizeSettings() {
+        if UserDefaults.standard.object(forKey: "noteSnapWidthInches") != nil {
+            widthInches = UserDefaults.standard.double(forKey: "noteSnapWidthInches")
+            heightInches = UserDefaults.standard.double(forKey: "noteSnapHeightInches")
+        } else {
+            // Default values
+            widthInches = 2.0
+            heightInches = 3.0
         }
     }
 }
