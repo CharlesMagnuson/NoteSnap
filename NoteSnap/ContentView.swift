@@ -8,6 +8,13 @@
 import SwiftUI
 import Photos
 
+enum ClipboardStatus {
+    case unchecked
+    case valid(String)    // Contains the valid OmniFocus URL
+    case invalid          // No valid link found
+    case empty           // Clipboard is empty
+}
+
 struct ContentView: View {
     @State private var noteText: String = ""
     @State private var isGenerating: Bool = false
@@ -17,6 +24,11 @@ struct ContentView: View {
     @State private var widthInches: Double = 2.0
     @State private var heightInches: Double = 3.0
     @FocusState private var isTextFieldFocused: Bool
+
+    // QR Code feature state (additive - preserves all existing functionality)
+    @State private var includeQRCode: Bool = false
+    @State private var clipboardValidationStatus: ClipboardStatus = .unchecked
+    @State private var showQRCodeInfo: Bool = false
 
     private let imageGenerator = ImageGenerator()
     private let photosManager = PhotosManager()
@@ -74,6 +86,61 @@ struct ContentView: View {
 
                 Spacer()
                     .frame(height: 10)
+
+                // QR Code Toggle Section
+                VStack(spacing: 12) {
+                    HStack {
+                        Toggle("Include QR Code from Clipboard", isOn: $includeQRCode)
+                            .onChange(of: includeQRCode) { newValue in
+                                if newValue {
+                                    validateClipboard()
+                                } else {
+                                    clipboardValidationStatus = .unchecked
+                                }
+                            }
+                            .accessibilityHint("When enabled, embeds an OmniFocus task link from your clipboard as a QR code")
+
+                        Spacer()
+
+                        Button {
+                            showQRCodeInfo = true
+                        } label: {
+                            Image(systemName: "questionmark.circle")
+                                .font(.system(size: 16))
+                                .foregroundColor(.blue)
+                        }
+                        .accessibilityLabel("QR Code Help")
+                        .accessibilityHint("Shows information about how QR codes work")
+                    }
+
+                    // Status indicator
+                    if includeQRCode {
+                        HStack {
+                            statusIcon
+                            Text(statusText)
+                                .font(.caption)
+                                .foregroundColor(statusColor)
+                            Spacer()
+
+                            // Subtle refresh button
+                            Button {
+                                validateClipboard()
+                            } label: {
+                                Image(systemName: "arrow.clockwise")
+                                    .font(.system(size: 12))
+                                    .foregroundColor(.secondary)
+                            }
+                            .accessibilityLabel("Refresh clipboard status")
+                        }
+                        .accessibilityElement(children: .combine)
+                        .accessibilityLabel("QR Code Status: \(statusText)")
+                    }
+                }
+                .padding(.horizontal, 20)
+                .padding(.vertical, 4)
+
+                Spacer()
+                    .frame(height: 5)
 
                 // Generate Button - Snapchat Yellow
                 Button(action: generateAndSaveImage) {
@@ -148,6 +215,11 @@ struct ContentView: View {
             // Dismiss keyboard when tapping outside
             isTextFieldFocused = false
         }
+        // Removed automatic clipboard validation when app becomes active to prevent repeated permission dialogs
+        // Users can toggle the QR switch off/on to refresh clipboard status if needed
+        .sheet(isPresented: $showQRCodeInfo) {
+            QRCodeInfoView()
+        }
         .sheet(isPresented: $showSizeSettings) {
             SizeSettingsView(
                 widthInches: $widthInches,
@@ -174,8 +246,28 @@ struct ContentView: View {
         errorMessage = nil
         isGenerating = true
 
-        // Generate the image with custom dimensions
-        let image = imageGenerator.generateImage(from: noteText, widthInches: widthInches, heightInches: heightInches)
+        // Validate QR code if enabled
+        var qrCodeURL: String? = nil
+        if includeQRCode {
+            let validationResult = OmniFocusLinkValidator.validateClipboardContent()
+            switch validationResult {
+            case .success(let validURL):
+                qrCodeURL = validURL
+            case .failure(let error):
+                DispatchQueue.main.async {
+                    isGenerating = false
+                    errorMessage = error.localizedDescription
+                    // Hide error message after 5 seconds
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 5) {
+                        errorMessage = nil
+                    }
+                }
+                return
+            }
+        }
+
+        // Generate the image with custom dimensions AND optional QR code
+        let image = imageGenerator.generateImage(from: noteText, widthInches: widthInches, heightInches: heightInches, qrCodeURL: qrCodeURL)
 
         // Save to Photos
         photosManager.saveToPhotos(image: image) { result in
@@ -216,6 +308,77 @@ struct ContentView: View {
             // Default values
             widthInches = 2.0
             heightInches = 3.0
+        }
+    }
+
+    // MARK: - QR Code Status Helpers
+
+    private var statusIcon: some View {
+        Group {
+            switch clipboardValidationStatus {
+            case .valid:
+                Image(systemName: "checkmark.circle.fill")
+                    .foregroundColor(.green)
+            case .invalid:
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .foregroundColor(.orange)
+            case .empty:
+                Image(systemName: "info.circle.fill")
+                    .foregroundColor(.blue)
+            case .unchecked:
+                Image(systemName: "circle")
+                    .foregroundColor(.gray)
+            }
+        }
+        .font(.system(size: 14))
+    }
+
+    private var statusText: String {
+        switch clipboardValidationStatus {
+        case .valid:
+            return "Valid OmniFocus link detected"
+        case .invalid:
+            return "No OmniFocus link in clipboard"
+        case .empty:
+            return "Clipboard is empty"
+        case .unchecked:
+            return "Check clipboard content"
+        }
+    }
+
+    private var statusColor: Color {
+        switch clipboardValidationStatus {
+        case .valid:
+            return .green
+        case .invalid:
+            return .orange
+        case .empty:
+            return .blue
+        case .unchecked:
+            return .gray
+        }
+    }
+
+    // MARK: - QR Code Validation
+
+    private func validateClipboard() {
+        let result = OmniFocusLinkValidator.validateClipboardContent()
+
+        switch result {
+        case .success(let validURL):
+            clipboardValidationStatus = .valid(validURL)
+            // Announce status change for accessibility
+            UIAccessibility.post(notification: .announcement, argument: "Valid OmniFocus link detected")
+
+        case .failure(let error):
+            switch error {
+            case .emptyClipboard:
+                clipboardValidationStatus = .empty
+                UIAccessibility.post(notification: .announcement, argument: "Clipboard is empty")
+            case .invalidFormat, .generationFailed:
+                clipboardValidationStatus = .invalid
+                UIAccessibility.post(notification: .announcement, argument: "No valid OmniFocus link in clipboard")
+            }
         }
     }
 }
