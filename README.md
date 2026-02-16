@@ -2,6 +2,8 @@
 
 **NoteSnap** is a simple iOS app that converts text notes into images optimized for Liene's Pearl K100 printer and other Bluetooth photo printers. Images contain text describing the task and an optional QR code linking back to the task in OmniFocus.
 
+[Screenshot/App Demonstration](https://bsky.app/profile/cm.baysky.social/post/3merowuz3ss24)
+
 ## Features
 
 ### Core Functionality
