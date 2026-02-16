@@ -1,31 +1,32 @@
 # NoteSnap 📱✨
 
-**NoteSnap** is a powerful iOS app that converts text notes into perfectly-sized images optimized for Bluetooth photo printers, with advanced QR code integration for OmniFocus task management.
+**NoteSnap** is a simple iOS app that converts text notes into images optimized for Liene's Pearl K100 printer and other Bluetooth photo printers. Images contain text describing the task and an optional QR code linking back to the task in OmniFocus.
 
 ## Features
 
 ### Core Functionality
+
 - **Instant Launch**: Opens directly to text input for quick note creation
-- **Smart Sizing**: Automatically optimizes text size to fit perfectly in your chosen format
+- **Smart Sizing**: Optimizes text size to fit in your chosen format
 - **One-Touch Save**: Single button saves directly to Photos library
 - **Print Optimized**: Generates high-resolution images at 300 DPI for crisp printing
 - **Clean Interface**: Minimal, focused design with essential features
 
 ### Advanced Features
+
 - **Customizable Dimensions**: Choose any size from 1.0"×1.0" up to 6.0"×6.0"
-- **QR Code Integration**: Automatically embeds OmniFocus task links as QR codes
-- **Smart Clipboard Detection**: Recognizes OmniFocus URLs and offers QR code embedding
-- **Dynamic Layout**: QR codes intelligently position to maximize text space
+- **QR Code Integration/Smart Clipboard Detection**: Recognizes OmniFocus URLs and automatically embeds OmniFocus task links as QR codes
 
 ## Technical Specifications
 
 ### Image Output
+
 - **Default Dimensions**: 600×900 pixels (2"×3" at 300 DPI)
 - **Customizable Range**: 300-1800 pixels per dimension (1.0-6.0 inches at 300 DPI)
 - **Orientation**: Supports both portrait and landscape formats
 - **Background**: Pure white (#FFFFFF)
 - **Text**: Black (#000000), center-aligned with optimal spacing
-- **QR Codes**: 20% of image's smaller dimension for reliable scanning
+- **QR Codes**: Sized remain scannable while offering as much space as possible for text
 - **Format**: PNG for lossless quality
 
 ### Requirements
